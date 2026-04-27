@@ -11,16 +11,31 @@ def http_exception(
     headers: Optional[dict[str, str]] = None
 ) -> HTTPException:
     """
-    Construct an HTTPException with appropriate headers.
+    Build an OAuth2-compliant :class:`fastapi.HTTPException`.
 
-    Args:
-        status_code: HTTP status code
-        error: OAuth2/DPoP error code
-        error_desc: Human-readable error description
-        headers: Optional headers dict (e.g., from BaseAuthError.get_headers())
+    The response body always uses the shape ``{"error": ..., "error_description": ...}``
+    so API consumers receive a consistent error format regardless of status code.
 
-    Note: When used with BaseAuthError, pass the headers from get_headers()
-    to ensure correct WWW-Authenticate challenges are included.
+    When called after catching a :class:`BaseAuthError`, pass the headers returned
+    by ``BaseAuthError.get_headers()`` so that the correct ``WWW-Authenticate``
+    challenge is forwarded to the client.
+
+    :param status_code: The HTTP status code to return, for example ``401`` or ``403``.
+    :type status_code: int
+
+    :param error: A short OAuth2 error code such as ``"invalid_token"`` or
+        ``"insufficient_scope"``.
+    :type error: str
+
+    :param error_desc: A human-readable description of the error.
+    :type error_desc: str
+
+    :param headers: Optional response headers. Pass ``BaseAuthError.get_headers()``
+        here to include ``WWW-Authenticate`` challenges on 401 responses.
+    :type headers: dict[str, str], optional
+
+    :returns: An :class:`fastapi.HTTPException` ready to be raised.
+    :rtype: HTTPException
     """
     return HTTPException(
         status_code=status_code,
@@ -33,27 +48,34 @@ def http_exception(
 
 def _should_trust_proxy(request: Request) -> bool:
     """
-    Determines if X-Forwarded-* headers should be trusted.
+    Return whether ``X-Forwarded-*`` headers should be trusted for this request.
 
-    Returns:
-        bool: True if proxy headers should be trusted
+    Trust is disabled by default. Enable it by setting ``app.state.trust_proxy = True``
+    on your FastAPI application. Only do this when your app sits behind a known
+    reverse proxy; enabling it on a publicly exposed server allows clients to
+    spoof forwarded headers.
+
+    :param request: The incoming FastAPI request.
+    :type request: Request
+
+    :returns: ``True`` if proxy headers should be trusted, ``False`` otherwise.
+    :rtype: bool
     """
-    # Check if the app has explicitly enabled proxy trust
-    try:
-        return getattr(request.app.state, 'trust_proxy', False)
-    except AttributeError:
-        # If app.state doesn't exist or trust_proxy isn't set, don't trust
-        return False
 
 def _parse_forwarded_host(forwarded_host: Optional[str]) -> Optional[str]:
     """
-    Parses X-Forwarded-Host header, handling multiple comma-separated values.
+    Extract the original client-facing host from an ``X-Forwarded-Host`` header.
 
-    Args:
-        forwarded_host: Value of X-Forwarded-Host header
+    When a request passes through multiple proxies, each proxy may append its
+    own value separated by a comma. This function returns only the first (outermost)
+    value, which represents the host the client originally used.
 
-    Returns:
-        The first host value, or None if empty
+    :param forwarded_host: The raw value of the ``X-Forwarded-Host`` header.
+    :type forwarded_host: str, optional
+
+    :returns: The first host value with surrounding whitespace stripped, or
+        ``None`` if the input is empty or blank.
+    :rtype: str or None
     """
     if not forwarded_host:
         return None
@@ -67,14 +89,32 @@ def _parse_forwarded_host(forwarded_host: Optional[str]) -> Optional[str]:
 
 def get_canonical_url(request: Request) -> str:
     """
-    Constructs the canonical URL for DPoP validation, securely handling reverse proxy headers.
+    Build the canonical URL that the client used to make this request.
 
-    Args:
-        request: FastAPI/Starlette Request object
+    For DPoP validation, the ``htu`` claim in the DPoP proof must match the
+    URL the client targeted. When the app runs behind a reverse proxy, the
+    internal URL seen by FastAPI differs from the public URL the client used.
+    This function reconstructs the correct public URL by reading
+    ``X-Forwarded-Proto``, ``X-Forwarded-Host``, and ``X-Forwarded-Prefix``
+    headers, but only when proxy trust is explicitly enabled via
+    ``app.state.trust_proxy = True``.
 
-    Returns:
-        Canonical URL string matching what the client used
+    The URL fragment is always stripped because the DPoP spec excludes it
+    from the ``htu`` claim.
 
+    :param request: The incoming FastAPI request.
+    :type request: Request
+
+    :returns: The canonical URL string, for example
+        ``"https://api.example.com/v1/items"``.
+    :rtype: str
+
+    **Enabling reverse proxy support**
+
+    .. code-block:: python
+
+        app = FastAPI()
+        app.state.trust_proxy = True
     """
     # Start with the direct connection URL
     parsed = urlparse(str(request.url))
@@ -123,7 +163,28 @@ def get_canonical_url(request: Request) -> str:
 
 def validate_scopes(claims: dict, required_scopes: list[str]) -> bool:
     """
-    Verifies the 'scope' claim (a space-delimited string) includes all required_scopes.
+    Check that a token's ``scope`` claim includes every required scope.
+
+    The ``scope`` claim is expected to be a space-delimited string as defined
+    by RFC 6749. All values in ``required_scopes`` must be present for this
+    function to return ``True``. A missing or empty ``scope`` claim always
+    returns ``False``.
+
+    :param claims: The decoded JWT claims dictionary.
+    :type claims: dict
+
+    :param required_scopes: The list of scope strings that must all be present.
+    :type required_scopes: list[str]
+
+    :returns: ``True`` if every required scope is in the token, ``False`` otherwise.
+    :rtype: bool
+
+    .. code-block:: python
+
+        claims = {"scope": "read:items write:items"}
+
+        validate_scopes(claims, ["read:items"])              # True
+        validate_scopes(claims, ["read:items", "delete:items"])  # False
     """
     scope_str = claims.get("scope")
     if not scope_str:

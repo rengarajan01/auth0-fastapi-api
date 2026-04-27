@@ -1,0 +1,320 @@
+{
+  "meta": {
+    "package": "auth0-fastapi-api",
+    "version": "1.0.0b7",
+    "status": "active",
+    "generatedAt": "2026-04-22T11:48:21.548662+00:00"
+  },
+  "navigation": [
+    {
+      "section": "Core",
+      "items": [
+        {
+          "id": "auth0-fastapi",
+          "title": "Auth0FastAPI",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "section": "Cache",
+      "items": [
+        {
+          "id": "cache-adapter",
+          "title": "CacheAdapter",
+          "kind": "interface"
+        },
+        {
+          "id": "in-memory-cache",
+          "title": "InMemoryCache",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "section": "Multi-Domain",
+      "items": [
+        {
+          "id": "domains-resolver",
+          "title": "DomainsResolver",
+          "kind": "type"
+        },
+        {
+          "id": "domains-resolver-context",
+          "title": "DomainsResolverContext",
+          "kind": "interface"
+        },
+        {
+          "id": "domains-resolver-error",
+          "title": "DomainsResolverError",
+          "kind": "class"
+        }
+      ]
+    },
+    {
+      "section": "Errors",
+      "items": [
+        {
+          "id": "configuration-error",
+          "title": "ConfigurationError",
+          "kind": "class"
+        }
+      ]
+    }
+  ],
+  "pages": {
+    "auth0-fastapi": {
+      "id": "auth0-fastapi",
+      "title": "Auth0FastAPI",
+      "kind": "class",
+      "description": "The main class for protecting FastAPI routes with Auth0.\n\nCreate one instance per application and use `require_auth` to\nguard individual routes. The instance exposes ``api_client`` for advanced\nuse cases such as token exchange.\n\n**Single domain setup**\n\n**Multiple custom domains setup**",
+      "constructor": {
+        "signature": "Auth0FastAPI(domain: Optional[str] = None, audience: str = '', domains: Union[list[str], Callable, NoneType] = None, client_id=None, client_secret=None, custom_fetch=None, dpop_enabled=True, dpop_required=False, dpop_iat_leeway=30, dpop_iat_offset=300, cache_adapter: Optional[auth0_api_python.cache.CacheAdapter] = None, cache_ttl_seconds: int = 600, cache_max_entries: int = 100)",
+        "parameters": [
+          {
+            "name": "domain",
+            "type": "str, optional",
+            "optional": true,
+            "description": "Your Auth0 tenant domain, for example ``\"your-tenant.us.auth0.com\"``. Use this for single-tenant setups. Omit when using ``domains``."
+          },
+          {
+            "name": "audience",
+            "type": "str",
+            "optional": false,
+            "description": "The API identifier registered in the Auth0 Dashboard. This must match the ``aud`` claim in incoming tokens. Required."
+          },
+          {
+            "name": "domains",
+            "type": "list[str] or Callable, optional",
+            "optional": true,
+            "description": "A list of allowed Auth0 domains, or a callable that resolves domains at request time. Use this for multi-tenant setups where tokens may come from different Auth0 tenants."
+          },
+          {
+            "name": "client_id",
+            "type": "str, optional",
+            "optional": true,
+            "description": "The client ID used for token exchange flows."
+          },
+          {
+            "name": "client_secret",
+            "type": "str, optional",
+            "optional": true,
+            "description": "The client secret used for token exchange flows."
+          },
+          {
+            "name": "custom_fetch",
+            "type": "Callable, optional",
+            "optional": true,
+            "description": "A custom async HTTP function to replace the default HTTP client used by the underlying SDK. Useful for testing or proxying."
+          },
+          {
+            "name": "dpop_enabled",
+            "type": "bool",
+            "optional": false,
+            "description": "Accept DPoP-bound tokens in addition to Bearer tokens. Defaults to ``True``."
+          },
+          {
+            "name": "dpop_required",
+            "type": "bool",
+            "optional": false,
+            "description": "When ``True``, only DPoP tokens are accepted. Requests using a plain Bearer token are rejected with a 401. Defaults to ``False``."
+          },
+          {
+            "name": "dpop_iat_leeway",
+            "type": "int",
+            "optional": false,
+            "description": "Clock skew tolerance in seconds when validating the ``iat`` claim of a DPoP proof. Defaults to ``30``."
+          },
+          {
+            "name": "dpop_iat_offset",
+            "type": "int",
+            "optional": false,
+            "description": "Maximum acceptable age of a DPoP proof in seconds. Proofs older than this value are rejected. Defaults to ``300``."
+          },
+          {
+            "name": "cache_adapter",
+            "type": "CacheAdapter, optional",
+            "optional": true,
+            "description": "A custom cache backend that implements `CacheAdapter`. When provided, ``cache_max_entries`` is ignored and you configure the cache directly on your adapter. Defaults to an in-memory LRU cache."
+          },
+          {
+            "name": "cache_ttl_seconds",
+            "type": "int",
+            "optional": false,
+            "description": "How long JWKS results are cached in seconds. Defaults to ``600``."
+          },
+          {
+            "name": "cache_max_entries",
+            "type": "int",
+            "optional": false,
+            "description": "Maximum number of entries in the default in-memory cache before the least-recently-used entry is evicted. Ignored when ``cache_adapter`` is provided. Defaults to ``100``."
+          }
+        ]
+      },
+      "members": [
+        {
+          "id": "require-auth",
+          "title": "require_auth",
+          "kind": "method",
+          "signature": "require_auth(scopes: Union[str, list[str], NoneType] = None)",
+          "description": "Return a FastAPI dependency that validates the incoming request's access token.\n\nAttach this to any route using FastAPI's ``Depends()``. The dependency\nautomatically detects whether the client is using a Bearer token or a\nDPoP-bound token, validates it against Auth0, and returns the decoded\nJWT claims on success.\n\nIf ``scopes`` are specified, the token's ``scope`` claim must contain\nevery scope in the list. A missing or insufficient scope returns a 403.",
+          "parameters": [
+            {
+              "name": "scopes",
+              "type": "str or list[str], optional",
+              "optional": true,
+              "description": "One or more OAuth2 scopes that the token must include. Pass a single string or a list of strings."
+            }
+          ],
+          "returns": {
+            "type": "Callable",
+            "description": "An async dependency callable that resolves to a ``dict`` containing the decoded JWT claims (for example ``sub``, ``scope``, ``iss``, ``aud``)."
+          },
+          "throws": [
+            {
+              "name": "HTTPException",
+              "type": "HTTPException",
+              "description": "When the token is missing, expired, or invalid."
+            },
+            {
+              "name": "HTTPException",
+              "type": "HTTPException",
+              "description": "When the token does not contain the required scopes."
+            },
+            {
+              "name": "HTTPException",
+              "type": "HTTPException",
+              "description": "When an unexpected error occurs during validation."
+            }
+          ],
+          "examples": [
+            {
+              "title": "",
+              "language": "python",
+              "code": "from fastapi import Depends, FastAPI\nfrom auth0_fastapi_api import Auth0FastAPI\n\napp = FastAPI()\nauth0 = Auth0FastAPI(\n    domain=\"your-tenant.us.auth0.com\",\n    audience=\"https://api.example.com\"\n)\n\n@app.get(\"/profile\")\nasync def get_profile(claims: dict = Depends(auth0.require_auth())):\n    return {\"user_id\": claims[\"sub\"]}"
+            },
+            {
+              "title": "",
+              "language": "python",
+              "code": "@app.get(\"/items\")\nasync def list_items(claims: dict = Depends(auth0.require_auth(scopes=[\"read:items\"]))):\n    return {\"items\": []}\n\n@app.post(\"/items\")\nasync def create_item(claims: dict = Depends(auth0.require_auth(scopes=[\"write:items\"]))):\n    return {\"created\": True}"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "",
+          "language": "python",
+          "code": "from auth0_fastapi_api import Auth0FastAPI\n\nauth0 = Auth0FastAPI(\n    domain=\"your-tenant.us.auth0.com\",\n    audience=\"https://api.example.com\"\n)"
+        },
+        {
+          "title": "",
+          "language": "python",
+          "code": "auth0 = Auth0FastAPI(\n    domains=[\"tenant-a.us.auth0.com\", \"tenant-b.us.auth0.com\"],\n    audience=\"https://api.example.com\"\n)"
+        }
+      ]
+    },
+    "cache-adapter": {
+      "id": "cache-adapter",
+      "title": "CacheAdapter",
+      "kind": "interface",
+      "description": "Abstract base class for cache implementations.\n\nAllows custom cache backends (Redis, Memcached, etc.) to be plugged into\nthe ApiClient for caching OIDC discovery metadata and JWKS.\n\nExample:\n    class RedisCache(CacheAdapter):\n        def __init__(self, redis_client):\n            self.redis = redis_client\n\n        def get(self, key: str) -> Optional[Any]:\n            value = self.redis.get(key)\n            return json.loads(value) if value else None\n\n        def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> None:\n            self.redis.set(key, json.dumps(value), ex=ttl_seconds)\n\n        def delete(self, key: str) -> None:\n            self.redis.delete(key)\n\n        def clear(self) -> None:\n            self.redis.flushdb()",
+      "members": [
+        {
+          "id": "clear",
+          "title": "clear",
+          "kind": "method",
+          "signature": "clear()",
+          "description": "Clear all cache entries."
+        },
+        {
+          "id": "delete",
+          "title": "delete",
+          "kind": "method",
+          "signature": "delete(key: str)",
+          "description": "Delete value from cache.\n\nArgs:\n    key: Cache key to delete"
+        },
+        {
+          "id": "get",
+          "title": "get",
+          "kind": "method",
+          "signature": "get(key: str)",
+          "description": "Get value from cache by key.\n\nArgs:\n    key: Cache key to retrieve\n\nReturns:\n    Cached value if found and not expired, None otherwise"
+        },
+        {
+          "id": "set",
+          "title": "set",
+          "kind": "method",
+          "signature": "set(key: str, value: Any, ttl_seconds: Optional[int] = None)",
+          "description": "Set value in cache with optional TTL.\n\nArgs:\n    key: Cache key to store\n    value: Value to cache\n    ttl_seconds: Time-to-live in seconds. None means no expiration."
+        }
+      ]
+    },
+    "in-memory-cache": {
+      "id": "in-memory-cache",
+      "title": "InMemoryCache",
+      "kind": "class",
+      "description": "Default in-memory cache implementation with LRU eviction.\n\nDesigned for asyncio (single-threaded).\nFor multi-threaded environments, implement a custom CacheAdapter\nwith appropriate locking.\n\nFeatures:\n- TTL (time-to-live) support per entry using monotonic clock\n- LRU (Least Recently Used) eviction when max_entries reached\n- No external dependencies\n\nArgs:\n    max_entries: Maximum number of entries to cache. When exceeded,\n                least recently used entry is evicted. Default: 100.\n\nExample:\n    cache = InMemoryCache(max_entries=50)\n    cache.set(\"key1\", {\"data\": \"value\"}, ttl_seconds=600)\n    value = cache.get(\"key1\")  # Returns {\"data\": \"value\"}",
+      "constructor": {
+        "signature": "InMemoryCache(max_entries: int = 100)",
+        "parameters": []
+      }
+    },
+    "domains-resolver": {
+      "id": "domains-resolver",
+      "title": "DomainsResolver",
+      "kind": "type",
+      "description": "Type alias for a callable that resolves allowed Auth0 domains at request time. Used in multi-tenant setups.",
+      "type": "Callable[[DomainsResolverContext], list[str]]",
+      "examples": [
+        {
+          "title": "",
+          "language": "python",
+          "code": "from auth0_fastapi_api import Auth0FastAPI, DomainsResolverContext\n\ndef resolve_domains(ctx: DomainsResolverContext) -> list[str]:\n    if ctx.unverified_iss.endswith('.us.auth0.com'):\n        return ['tenant-a.us.auth0.com']\n    return ['tenant-b.eu.auth0.com']\n\nauth0 = Auth0FastAPI(\n    domains=resolve_domains,\n    audience='https://api.example.com'\n)"
+        }
+      ]
+    },
+    "domains-resolver-context": {
+      "id": "domains-resolver-context",
+      "title": "DomainsResolverContext",
+      "kind": "interface",
+      "description": "Context passed to domains resolver functions.\n\nAttributes:\n    request_url: The URL the API request was made to (optional)\n    request_headers: Request headers dict (e.g., Host, X-Forwarded-Host) (optional)\n    unverified_iss: The issuer claim from the unverified token",
+      "properties": [
+        {
+          "name": "request_url",
+          "type": "typing.Optional[str]",
+          "description": "The URL of the incoming request."
+        },
+        {
+          "name": "request_headers",
+          "type": "typing.Optional[dict]",
+          "description": "The headers of the incoming request as a dictionary."
+        },
+        {
+          "name": "unverified_iss",
+          "type": "str",
+          "description": "The issuer claim extracted from the token before signature verification. Use this to decide which tenant to allow."
+        }
+      ]
+    },
+    "domains-resolver-error": {
+      "id": "domains-resolver-error",
+      "title": "DomainsResolverError",
+      "kind": "class",
+      "description": "Error raised when domains resolver function fails."
+    },
+    "configuration-error": {
+      "id": "configuration-error",
+      "title": "ConfigurationError",
+      "kind": "class",
+      "description": "Error raised when SDK configuration is invalid.",
+      "examples": [
+        {
+          "title": "",
+          "language": "python",
+          "code": "from auth0_fastapi_api import Auth0FastAPI\n\n# audience is required \u2014 omitting it raises ConfigurationError\nauth0 = Auth0FastAPI(domain='YOUR_AUTH0_DOMAIN')"
+        }
+      ]
+    }
+  }
+}
